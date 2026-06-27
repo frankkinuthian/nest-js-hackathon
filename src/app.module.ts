@@ -11,12 +11,15 @@ import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { ArcjetGuard } from './common/guards/arcjet.guard.js';
 import { ArcjetLogger } from './lib/arcjet/arcjet-logger.js';
+import { PrismaModule } from './lib/database/prisma.module.js';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env.development.local',
+      // `.env.development.local` holds app secrets (ARCJET_KEY); `.env` holds
+      // the Prisma Postgres DATABASE_URL. Earlier files take precedence.
+      envFilePath: ['.env.development.local', '.env'],
       validate(config) {
         if (typeof config.ARCJET_KEY !== 'string' || config.ARCJET_KEY === '') {
           throw new Error(
@@ -55,6 +58,7 @@ import { ArcjetLogger } from './lib/arcjet/arcjet-logger.js';
         };
       },
     }),
+    PrismaModule,
   ],
   controllers: [AppController],
   providers: [
