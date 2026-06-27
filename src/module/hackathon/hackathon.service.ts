@@ -42,6 +42,31 @@ export class HackathonService {
     return hackathon;
   }
 
+  async findParticipants(hackathonId: string) {
+  await this.findOne(hackathonId); // 404 if hackathon doesn't exist
+
+  const result = await this.prisma.hackathonParticipant.findMany({
+    where: { hackathonId },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          image: true,
+          createdAt: true,
+        },
+      },
+    },
+  });
+
+  return result.map((entry) => ({
+    ...entry.user,
+    joinedAt: entry.createdAt,
+  }));
+}
+
+
   async update(id: string, dto: UpdateHackathonDto) {
     await this.findOne(id);
 

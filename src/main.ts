@@ -4,6 +4,7 @@ import {
   ValidationError,
   ValidationPipe,
 } from '@nestjs/common';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module.js';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor.js';
 
@@ -38,6 +39,16 @@ async function bootstrap() {
   );
 
   app.useGlobalInterceptors(new ResponseInterceptor(app.get(Reflector)));
+
+  const config = new DocumentBuilder()
+    .setTitle('Hackathon API')
+    .setDescription('Hackathon platform REST API')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api-docs', app, document);
 
   await app.listen(process.env.PORT ?? 3000);
 }
