@@ -1,98 +1,118 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Hackathon Backend API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A production-style [NestJS 11](https://nestjs.com/) API (Express adapter) with
+authentication, edge security, and a managed Postgres database wired in.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Stack
 
-## Description
+| Concern        | Choice                                                                    |
+| -------------- | ------------------------------------------------------------------------- |
+| Framework      | NestJS 11 (Express), ESM, TypeScript (NodeNext)                           |
+| Auth           | [Better Auth](https://better-auth.com) via `@thallesp/nestjs-better-auth` |
+| Security       | [Arcjet](https://arcjet.com) — Shield (WAF) + rate limiting               |
+| ORM / Database | Prisma 7 (`prisma-client` generator) + Prisma Postgres                    |
+| DB driver      | `@prisma/adapter-pg` over the direct connection string                    |
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Project structure
 
-## Project setup
-
-```bash
-$ pnpm install
+```
+src/
+├── app.module.ts            # Root module: Config, Arcjet, Prisma, Auth
+├── main.ts                  # Bootstrap (body parser disabled for Better Auth)
+├── common/
+│   └── guards/              # ArcjetGuard (global, via APP_GUARD)
+├── generated/prisma/        # Generated Prisma client (gitignored)
+└── lib/                     # Infrastructure integrations (one folder each)
+    ├── arcjet/              # Arcjet logger bridge
+    ├── auth/auth.ts         # Better Auth instance
+    └── database/            # @Global() PrismaModule + PrismaService
+prisma/
+├── schema.prisma            # Better Auth models + Role enum
+└── migrations/
 ```
 
-## Compile and run the project
+## Setup
 
 ```bash
-# development
-$ pnpm run start
-
-# watch mode
-$ pnpm run start:dev
-
-# production mode
-$ pnpm run start:prod
+pnpm install
 ```
 
-## Run tests
+Two env files are used (both gitignored). Earlier files take precedence:
+
+`.env` — runtime + Prisma CLI:
+
+```dotenv
+DATABASE_URL="postgres://...@db.prisma.io:5432/postgres?sslmode=require"
+```
+
+`.env.development.local` — app secrets:
+
+```dotenv
+ARCJET_KEY=ajkey_...
+ARCJET_MODE=LIVE            # LIVE enforces; DRY_RUN logs only
+BETTER_AUTH_SECRET=...      # 32+ chars: openssl rand -base64 32
+BETTER_AUTH_URL=http://localhost:3000
+```
+
+## Database
 
 ```bash
-# unit tests
-$ pnpm run test
-
-# e2e tests
-$ pnpm run test:e2e
-
-# test coverage
-$ pnpm run test:cov
+pnpm run db:migrate         # prisma migrate dev
+pnpm run db:generate        # regenerate the client
+pnpm run db:studio          # browse data
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+## Run
 
 ```bash
-$ pnpm install -g @nestjs/mau
-$ mau deploy
+pnpm run start:dev          # watch mode
+pnpm run start:prod         # node dist/src/main.js
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## Authentication
 
-## Resources
+Better Auth follows the official [NestJS integration](https://better-auth.com/docs/integrations/nestjs):
 
-Check out a few resources that may come in handy when working with NestJS:
+- Auth routes are mounted under **`/api/auth`** (e.g. `POST /api/auth/sign-up/email`,
+  `POST /api/auth/sign-in/email`, `GET /api/auth/ok`).
+- Email + password sign-up/sign-in is enabled. No social providers or email
+  verification yet.
+- A **global `AuthGuard` protects every route by default.** Opt out per
+  route/controller with `@AllowAnonymous()` or `@OptionalAuth()`, and read the
+  session with the `@Session()` decorator.
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+### Roles
 
-## Support
+Users have a `role` enum — `PARTICIPANT` (default) or `ADMIN`. The role is
+**server-side only**: it is declared as a Better Auth additional field with
+`input: false`, so it is rejected from the sign-up payload and cannot be
+self-assigned. Protect admin routes with `@Roles(["ADMIN"])`.
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+```bash
+# role is ignored on sign-up — the new user is always PARTICIPANT
+curl -X POST http://localhost:3000/api/auth/sign-up/email \
+  -H "Content-Type: application/json" \
+  -d '{"email":"a@b.dev","password":"supersecret123","name":"Ada","role":"ADMIN"}'
+```
 
-## Stay in touch
+## Security
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+Every request passes through a global `ArcjetGuard` running Shield (WAF) and a
+fixed-window rate limit (10 requests / 60s per IP). Set `ARCJET_MODE=DRY_RUN`
+to log decisions without blocking. Note the rate limit also applies to
+`/api/auth/*`, so heavy auth testing from one IP may return `429`.
 
-## License
+## Tests
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+```bash
+pnpm run test               # unit
+pnpm run test:e2e           # e2e
+pnpm run test:cov           # coverage
+```
+
+## Conventions
+
+See [`AGENTS.md`](./AGENTS.md). In short: NestJS-first patterns, constructor
+injection only (no direct `new Service()`), each infrastructure integration in
+its own `src/lib/<name>/` module, feature modules in `src/module/<name>/`,
+shared guards/interceptors/decorators in `src/common/`.
