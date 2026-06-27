@@ -15,6 +15,7 @@ import { ArcjetLogger } from './lib/arcjet/arcjet-logger.js';
 import { PrismaModule } from './lib/database/prisma.module.js';
 import { UserModule } from './module/user/user.module.js';
 import { auth } from './lib/auth/auth.js';
+import { HackathonModule } from './module/hackathon/hackathon.module.js';
 
 @Module({
   imports: [
@@ -75,6 +76,7 @@ import { auth } from './lib/auth/auth.js';
     // protected by default; opt out with @AllowAnonymous / @OptionalAuth) and
     // mounts the auth controllers under /api/auth.
     AuthModule.forRoot({ auth }),
+    HackathonModule,
   ],
   controllers: [AppController],
   providers: [
