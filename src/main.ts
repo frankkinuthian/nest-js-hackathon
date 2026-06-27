@@ -1,5 +1,6 @@
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module.js';
+import { ResponseInterceptor } from './common/interceptors/response.interceptor.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -8,6 +9,9 @@ async function bootstrap() {
     // re-adds JSON/urlencoded parsers for all non-auth routes.
     bodyParser: false,
   });
+
+  app.useGlobalInterceptors(new ResponseInterceptor(app.get(Reflector)));
+
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();
