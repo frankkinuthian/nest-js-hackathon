@@ -17,6 +17,7 @@ lerna-debug.log*
 
 # Kiro IDE misc
 .kiro/*
+memory.md
 
 # Tests
 /coverage
