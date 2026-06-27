@@ -13,6 +13,7 @@ import { AppService } from './app.service.js';
 import { ArcjetGuard } from './common/guards/arcjet.guard.js';
 import { ArcjetLogger } from './lib/arcjet/arcjet-logger.js';
 import { PrismaModule } from './lib/database/prisma.module.js';
+import { UserModule } from './module/user/user.module.js';
 import { auth } from './lib/auth/auth.js';
 
 @Module({
@@ -69,6 +70,7 @@ import { auth } from './lib/auth/auth.js';
       },
     }),
     PrismaModule,
+    UserModule,
     // Better Auth integration. Registers a global AuthGuard (routes are
     // protected by default; opt out with @AllowAnonymous / @OptionalAuth) and
     // mounts the auth controllers under /api/auth.
