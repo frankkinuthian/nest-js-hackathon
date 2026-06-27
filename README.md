@@ -12,22 +12,32 @@ authentication, edge security, and a managed Postgres database wired in.
 | Security       | [Arcjet](https://arcjet.com) — Shield (WAF) + rate limiting               |
 | ORM / Database | Prisma 7 (`prisma-client` generator) + Prisma Postgres                    |
 | DB driver      | `@prisma/adapter-pg` over the direct connection string                    |
+| Validation     | `class-validator` + `class-transformer` (global ValidationPipe)           |
 
 ## Project structure
 
 ```
 src/
 ├── app.module.ts            # Root module: Config, Arcjet, Prisma, Auth
-├── main.ts                  # Bootstrap (body parser disabled for Better Auth)
+├── main.ts                  # Bootstrap (ValidationPipe, body parser disabled)
 ├── common/
-│   └── guards/              # ArcjetGuard (global, via APP_GUARD)
+│   ├── decorators/          # @ResponseMessage
+│   ├── guards/              # ArcjetGuard (global, via APP_GUARD)
+│   └── interceptors/        # Response envelope interceptor
 ├── generated/prisma/        # Generated Prisma client (gitignored)
-└── lib/                     # Infrastructure integrations (one folder each)
-    ├── arcjet/              # Arcjet logger bridge
-    ├── auth/auth.ts         # Better Auth instance
-    └── database/            # @Global() PrismaModule + PrismaService
+├── lib/                     # Infrastructure integrations (one folder each)
+│   ├── arcjet/              # Arcjet logger bridge
+│   ├── auth/auth.ts         # Better Auth instance
+│   └── database/            # @Global() PrismaModule + PrismaService
+└── module/
+    ├── hackathon/           # Hackathon CRUD + join
+    │   ├── dto/             # CreateHackathonDto, UpdateHackathonDto
+    │   ├── hackathon.controller.ts
+    │   ├── hackathon.module.ts
+    │   └── hackathon.service.ts
+    └── user/                # User module
 prisma/
-├── schema.prisma            # Better Auth models + Role enum
+├── schema.prisma            # Better Auth + Hackathon models
 └── migrations/
 ```
 
@@ -84,16 +94,53 @@ Better Auth follows the official [NestJS integration](https://better-auth.com/do
 ### Roles
 
 Users have a `role` enum — `PARTICIPANT` (default) or `ADMIN`. The role is
-**server-side only**: it is declared as a Better Auth additional field with
+**server-side only**: declared as a Better Auth additional field with
 `input: false`, so it is rejected from the sign-up payload and cannot be
-self-assigned. Protect admin routes with `@Roles(["ADMIN"])`.
+self-assigned. Protect routes with `@Roles(["ADMIN"])` or `@Roles(["PARTICIPANT"])`.
 
-```bash
-# role is ignored on sign-up — the new user is always PARTICIPANT
-curl -X POST http://localhost:3000/api/auth/sign-up/email \
-  -H "Content-Type: application/json" \
-  -d '{"email":"a@b.dev","password":"supersecret123","name":"Ada","role":"ADMIN"}'
+## Validation
+
+A global `ValidationPipe` (configured in `main.ts`) validates all incoming DTOs
+using `class-validator` decorators. Invalid requests return a `400` with a clean
+array of errors:
+
+```json
+{
+  "statusCode": 400,
+  "message": [
+    {
+      "property": "name",
+      "message": "name must be longer than or equal to 3 characters"
+    },
+    {
+      "property": "startsAt",
+      "message": "minimal allowed date for startsAt is ..."
+    }
+  ],
+  "error": "Bad Request"
+}
 ```
+
+The pipe also strips unknown properties (`whitelist: true`) and transforms
+payloads into DTO class instances (`transform: true`).
+
+## API — Hackathons
+
+All write operations require an authenticated admin. Read operations are public.
+
+| Method | Endpoint               | Access      | Description            |
+| ------ | ---------------------- | ----------- | ---------------------- |
+| POST   | `/hackathons`          | ADMIN       | Create a hackathon     |
+| GET    | `/hackathons`          | Public      | List all hackathons    |
+| GET    | `/hackathons/:id`      | Public      | Get a single hackathon |
+| PATCH  | `/hackathons/:id`      | ADMIN       | Update a hackathon     |
+| DELETE | `/hackathons/:id`      | ADMIN       | Delete a hackathon     |
+| POST   | `/hackathons/:id/join` | PARTICIPANT | Join a hackathon       |
+
+### Join rules
+
+- Hackathon must exist, be active (`isActive: true`), and not ended (`endDate` in the future).
+- Duplicate joins throw `400 Bad Request`.
 
 ## Security
 
