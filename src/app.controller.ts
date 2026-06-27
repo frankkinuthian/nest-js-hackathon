@@ -12,4 +12,10 @@ export class AppController {
   getHello(): string {
     return this.appService.getHello();
   }
+
+  @AllowAnonymous()
+  @Get('health')
+  healthCheck() {
+    return { status: 'ok' };
+  }
 }
