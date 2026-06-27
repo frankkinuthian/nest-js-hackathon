@@ -15,6 +15,9 @@ lerna-debug.log*
 # OS
 .DS_Store
 
+# Kiro IDE misc
+.kiro/*
+
 # Tests
 /coverage
 /.nyc_output
