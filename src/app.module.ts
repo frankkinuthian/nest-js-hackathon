@@ -16,6 +16,8 @@ import { PrismaModule } from './lib/database/prisma.module.js';
 import { UserModule } from './module/user/user.module.js';
 import { auth } from './lib/auth/auth.js';
 import { HackathonModule } from './module/hackathon/hackathon.module.js';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+
 
 @Module({
   imports: [
@@ -76,6 +78,7 @@ import { HackathonModule } from './module/hackathon/hackathon.module.js';
     // protected by default; opt out with @AllowAnonymous / @OptionalAuth) and
     // mounts the auth controllers under /api/auth.
     AuthModule.forRoot({ auth }),
+    EventEmitterModule.forRoot(),
     HackathonModule,
   ],
   controllers: [AppController],

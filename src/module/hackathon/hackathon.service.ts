@@ -7,10 +7,15 @@ import { PrismaService } from '../../lib/database/prisma.service.js';
 import { CreateHackathonDto } from './dto/create-hackathon.dto.js';
 import { UpdateHackathonDto } from './dto/update-hackathon.dto.js';
 import { ListHackathonsQueryDto } from './dto/list-hackathons-query.dto.js';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { HackathonJoinedEvent } from './events/hackathon-joined.event.js';
 
 @Injectable()
 export class HackathonService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   async create(dto: CreateHackathonDto, authorId: string) {
     return this.prisma.hackathon.create({
@@ -128,8 +133,15 @@ export class HackathonService {
       throw new BadRequestException('You have already joined this hackathon');
     }
 
-    return this.prisma.hackathonParticipant.create({
+    const participant = await this.prisma.hackathonParticipant.create({
       data: { hackathonId, userId },
     });
+
+    this.eventEmitter.emit(
+      'hackathon.joined',
+      new HackathonJoinedEvent(hackathonId, userId, hackathon.name),
+    );
+
+    return participant;
   }
 }
