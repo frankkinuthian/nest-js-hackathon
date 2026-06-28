@@ -7,7 +7,7 @@ import {
   Injectable,
   Logger,
 } from '@nestjs/common';
-import { ARCJET, type ArcjetNest } from '@arcjet/nest';
+import { ARCJET, type ArcjetNest, type ArcjetNestRequest } from '@arcjet/nest';
 import type { Request } from 'express';
 
 /**
@@ -24,7 +24,9 @@ export class ArcjetGuard implements CanActivate {
   constructor(@Inject(ARCJET) private readonly arcjet: ArcjetNest) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest<Request>();
+    const request = context
+      .switchToHttp()
+      .getRequest<Request>() as unknown as ArcjetNestRequest;
 
     const decision = await this.arcjet.protect(request);
 

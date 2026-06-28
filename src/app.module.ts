@@ -17,7 +17,7 @@ import { UserModule } from './module/user/user.module.js';
 import { auth } from './lib/auth/auth.js';
 import { HackathonModule } from './module/hackathon/hackathon.module.js';
 import { EventEmitterModule } from '@nestjs/event-emitter';
-
+import { LoggerModule } from 'nestjs-pino';
 
 @Module({
   imports: [
@@ -79,6 +79,18 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
     // mounts the auth controllers under /api/auth.
     AuthModule.forRoot({ auth }),
     EventEmitterModule.forRoot(),
+    LoggerModule.forRoot({
+      pinoHttp: {
+        // Pretty-print in development, raw JSON in production (for Axiom).
+        transport:
+          process.env.NODE_ENV !== 'production'
+            ? { target: 'pino-pretty', options: { colorize: true } }
+            : undefined,
+        // Attach a unique request ID to every log within a request lifecycle.
+        genReqId: (req) =>
+          (req.headers['x-request-id'] as string) ?? crypto.randomUUID(),
+      },
+    }),
     HackathonModule,
   ],
   controllers: [AppController],

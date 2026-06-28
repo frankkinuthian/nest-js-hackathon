@@ -5,6 +5,7 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module.js';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor.js';
 
@@ -26,7 +27,12 @@ async function bootstrap() {
     // disabled so Better Auth can read the raw request body. The library
     // re-adds JSON/urlencoded parsers for all non-auth routes.
     bodyParser: false,
+    // Buffer logs until Pino logger is attached below.
+    bufferLogs: true,
   });
+
+  // Replace NestJS's default logger with Pino.
+  app.useLogger(app.get(Logger));
 
   app.useGlobalPipes(
     new ValidationPipe({
