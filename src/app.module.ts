@@ -81,11 +81,16 @@ import { LoggerModule } from 'nestjs-pino';
     EventEmitterModule.forRoot(),
     LoggerModule.forRoot({
       pinoHttp: {
-        // Pretty-print in development, raw JSON in production (for Axiom).
         transport:
           process.env.NODE_ENV !== 'production'
             ? { target: 'pino-pretty', options: { colorize: true } }
-            : undefined,
+            : {
+                target: '@axiomhq/pino',
+                options: {
+                  dataset: process.env.AXIOM_DATASET ?? 'nest-hackathon-api',
+                  token: process.env.AXIOM_TOKEN,
+                },
+              },
         // Attach a unique request ID to every log within a request lifecycle.
         genReqId: (req) =>
           (req.headers['x-request-id'] as string) ?? crypto.randomUUID(),
