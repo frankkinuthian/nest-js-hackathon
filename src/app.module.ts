@@ -89,6 +89,24 @@ import { LoggerModule } from 'nestjs-pino';
         // Attach a unique request ID to every log within a request lifecycle.
         genReqId: (req) =>
           (req.headers['x-request-id'] as string) ?? crypto.randomUUID(),
+        // Don't log Render's health check pings.
+        autoLogging: {
+          ignore: (req) =>
+            (req.headers as Record<string, string>)['render-health-check'] ===
+            '1',
+        },
+        // Keep request logs compact — strip verbose headers/params.
+        serializers: {
+          req: (req) => ({
+            id: req.id,
+            method: req.method,
+            url: req.url,
+            remoteAddress: req.remoteAddress,
+          }),
+          res: (res) => ({
+            statusCode: res.statusCode,
+          }),
+        },
       },
     }),
     HackathonModule,
