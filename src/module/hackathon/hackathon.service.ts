@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../../lib/database/prisma.service.js';
 import { CreateHackathonDto } from './dto/create-hackathon.dto.js';
 import { UpdateHackathonDto } from './dto/update-hackathon.dto.js';
+import { ListHackathonsQueryDto } from './dto/list-hackathons-query.dto.js';
 
 @Injectable()
 export class HackathonService {
@@ -24,10 +25,29 @@ export class HackathonService {
     });
   }
 
-  async findAll() {
-    return this.prisma.hackathon.findMany({
+  async findAll(query: ListHackathonsQueryDto) {
+    const { take = 10, cursor } = query;
+
+    const hackathons = await this.prisma.hackathon.findMany({
+      take: take + 1, // Fetch one extra to determine if there's a next page
       orderBy: { createdAt: 'desc' },
+      ...(cursor && {
+        cursor: { id: cursor },
+        skip: 1, // Skip the cursor item itself
+      }),
     });
+
+    const hasNextPage = hackathons.length > take;
+    const data = hasNextPage ? hackathons.slice(0, take) : hackathons;
+    const nextCursor = hasNextPage ? data[data.length - 1].id : null;
+
+    return {
+      data,
+      meta: {
+        hasNextPage,
+        nextCursor,
+      },
+    };
   }
 
   async findOne(id: string) {
@@ -43,29 +63,28 @@ export class HackathonService {
   }
 
   async findParticipants(hackathonId: string) {
-  await this.findOne(hackathonId); // 404 if hackathon doesn't exist
+    await this.findOne(hackathonId); // 404 if hackathon doesn't exist
 
-  const result = await this.prisma.hackathonParticipant.findMany({
-    where: { hackathonId },
-    include: {
-      user: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          image: true,
-          createdAt: true,
+    const result = await this.prisma.hackathonParticipant.findMany({
+      where: { hackathonId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true,
+            createdAt: true,
+          },
         },
       },
-    },
-  });
+    });
 
-  return result.map((entry) => ({
-    ...entry.user,
-    joinedAt: entry.createdAt,
-  }));
-}
-
+    return result.map((entry) => ({
+      ...entry.user,
+      joinedAt: entry.createdAt,
+    }));
+  }
 
   async update(id: string, dto: UpdateHackathonDto) {
     await this.findOne(id);

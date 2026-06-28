@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import {
   AllowAnonymous,
@@ -17,6 +18,7 @@ import { ResponseMessage } from '../../common/decorators/response-message.decora
 import { HackathonService } from './hackathon.service.js';
 import { CreateHackathonDto } from './dto/create-hackathon.dto.js';
 import { UpdateHackathonDto } from './dto/update-hackathon.dto.js';
+import { ListHackathonsQueryDto } from './dto/list-hackathons-query.dto.js';
 
 @Controller('hackathons')
 export class HackathonController {
@@ -31,8 +33,8 @@ export class HackathonController {
 
   @Get()
   @AllowAnonymous()
-  findAll() {
-    return this.hackathonService.findAll();
+  findAll(@Query() query: ListHackathonsQueryDto) {
+    return this.hackathonService.findAll(query);
   }
 
   @Get(':id')
